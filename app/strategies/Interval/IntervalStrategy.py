@@ -58,20 +58,28 @@ class IntervalStrategy(BaseStrategy):
         )
         self.corridor = Corridor(bottom=corridor[0], top=corridor[1])
 
-    async def handle_corridor_crossing_top(self, last_price: float, corridor: Corridor, client:AsyncServices):
-        logger.debug(
-            f"Last price {last_price} is higher than top corridor border {corridor.top}. "
-            f"figi={self.figi}"
-        )
+    async def get_position_quantity(self, client: AsyncServices) -> int:
         positions = (
             await client.sandbox.get_sandbox_portfolio(account_id=self.account_id)
         ).positions
         position = get_position(positions, self.figi)
-        if position is not None and quotation_to_float(position.quantity) > 0:
-            quantity = quotation_to_float(position.quantity)
-            quantity_to_sell = min(quantity, self.config.quantity_limit)
+        if position is None:
+            return 0
+        return int(quotation_to_float(position.quantity))
+
+    async def handle_corridor_crossing_top(
+        self, last_price: float, corridor: Corridor, client: AsyncServices
+    ):
+        logger.debug(
+            f"Last price {last_price} is higher than top corridor border {corridor.top}. "
+            f"figi={self.figi}"
+        )
+
+        position_quantity = await self.get_position_quantity(client=client)
+        if position_quantity > 0:
+            quantity_to_sell = min(position_quantity, self.config.quantity_limit)
             logger.info(
-                f"Selling {self.config.quantity_limit} shares. Last price={last_price} figi={self.figi}"
+                f"Selling {quantity_to_sell} shares. Last price={last_price} figi={self.figi}"
             )
             await client.sandbox.post_sandbox_order(
                 figi=self.figi,
@@ -81,20 +89,28 @@ class IntervalStrategy(BaseStrategy):
                 account_id=self.account_id,
             )
 
-    async def handle_corridor_crossing_bottom(self, last_price: float, corridor: Corridor, client:AsyncServices):
+    async def handle_corridor_crossing_bottom(
+        self, last_price: float, corridor: Corridor, client: AsyncServices
+    ):
         logger.debug(
             f"Last price {last_price} is lower than bottom corridor border {corridor.bottom}. "
             f"figi={self.figi}"
         )
-        # TODO: check if we have enough money to buy
-        # TODO: check the result of the order and track its status
-        await client.sandbox.post_sandbox_order(
-            figi=self.figi,
-            direction=ORDER_DIRECTION_BUY,
-            quantity=self.config.quantity_limit,
-            order_type=ORDER_TYPE_MARKET,
-            account_id=self.account_id,
-        )
+        position_quantity = await self.get_position_quantity(client=client)
+        if position_quantity < self.config.quantity_limit:
+            quantity_to_buy = self.config.quantity_limit - position_quantity
+            logger.info(
+                f"Buying {quantity_to_buy} shares. Last price={last_price} figi={self.figi}"
+            )
+            # TODO: check if we have enough money to buy
+            # TODO: check the result of the order and track its status
+            await client.sandbox.post_sandbox_order(
+                figi=self.figi,
+                direction=ORDER_DIRECTION_BUY,
+                quantity=quantity_to_buy,
+                order_type=ORDER_TYPE_MARKET,
+                account_id=self.account_id,
+            )
 
     async def corridor_update_cycle(self):
         while True:
