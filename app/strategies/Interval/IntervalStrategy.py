@@ -21,19 +21,19 @@ class IntervalStrategy(BaseStrategy):
         self.config: IntervalStrategyConfig = IntervalStrategyConfig(**kwargs)
 
     async def get_historical_data(self) -> List[HistoricCandle]:
-        return (
-            await self.client.market_data.get_candles(
-                figi=self.figi,
-                from_=now() - timedelta(days=self.config.days_back_to_consider),
-                to=now(),
-                interval=CandleInterval.CANDLE_INTERVAL_DAY,
-            )
-        ).candles
+        candles = []
+        async for candle in self.client.get_all_candles(
+            figi=self.figi,
+            from_=now() - timedelta(days=self.config.days_back_to_consider),
+            to=now(),
+            interval=CandleInterval.CANDLE_INTERVAL_1_MIN,
+        ):
+            candles.append(candle)
+        return candles
 
     def find_corridor(self, candles: List[HistoricCandle]):
         values = []
         for candle in candles:
-            values.append(float(f"{candle.open.units}.{candle.open.nano}"))
             values.append(float(f"{candle.close.units}.{candle.close.nano}"))
         lower_percentile = (1 - self.config.interval_size) / 2 * 100
         return np.percentile(values, [lower_percentile, 100 - lower_percentile])
