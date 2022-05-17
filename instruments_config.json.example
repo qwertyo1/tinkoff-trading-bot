@@ -5,7 +5,7 @@
       "strategy": {
         "name": "interval",
         "parameters": {
-          "interval_size": "0.3",
+          "interval_size": "0.8",
           "days_back_to_consider": "5",
           "quantity_limit": 100,
           "check_interval": "3"

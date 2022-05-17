@@ -2,3 +2,4 @@
 venv/
 
 .env
+instruments_config.json
