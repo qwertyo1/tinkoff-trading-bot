@@ -16,15 +16,13 @@ logging.basicConfig(
 
 async def init():
     # TODO: move the client initialization to the strategy???
-    async with AsyncClient(settings.token) as client:
-        for instrument_config in instruments_config.instruments:
-            strategy = resolve_strategy(
-                strategy_name=instrument_config.strategy.name,
-                client=client,
-                figi=instrument_config.figi,
-                **instrument_config.strategy.parameters
-            )
-            asyncio.create_task(strategy.start())
+    for instrument_config in instruments_config.instruments:
+        strategy = resolve_strategy(
+            strategy_name=instrument_config.strategy.name,
+            figi=instrument_config.figi,
+            **instrument_config.strategy.parameters
+        )
+        asyncio.create_task(strategy.start())
 
 
 if __name__ == "__main__":
