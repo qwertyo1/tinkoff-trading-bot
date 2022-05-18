@@ -8,7 +8,7 @@ def quotation_to_float(quotation: Quotation) -> float:
     Convert quotation to float
     """
 
-    return float(f"{quotation.units}.{quotation.nano}")
+    return float(quotation.units + quotation.nano / 1000000000)
 
 
 def float_to_quotation(f: float) -> Quotation:
