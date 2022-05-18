@@ -1,11 +1,8 @@
 import asyncio
 import logging
 
-from tinkoff.invest import AsyncClient
-
-
+from app.client import client
 from app.instruments_config.parser import instruments_config
-from app.settings import settings
 from app.strategies.strategy_fabric import resolve_strategy
 
 logging.basicConfig(
@@ -15,7 +12,8 @@ logging.basicConfig(
 
 
 async def init():
-    # TODO: move the client initialization to the strategy???
+    await client.ainit()
+    # TODO: add account monitoring for statistics
     for instrument_config in instruments_config.instruments:
         strategy = resolve_strategy(
             strategy_name=instrument_config.strategy.name,
