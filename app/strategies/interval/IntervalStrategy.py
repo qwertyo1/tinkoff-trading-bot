@@ -13,14 +13,14 @@ from tinkoff.invest.grpc.orders_pb2 import (
 from tinkoff.invest.utils import now
 
 from app.client import client
-from app.strategies.Interval.models import IntervalStrategyConfig, Corridor
+from app.strategies.interval.models import IntervalStrategyConfig, Corridor
 from app.strategies.base import BaseStrategy
 from app.utils.portfolio import get_position, get_order
 from app.utils.quotation import quotation_to_float
 
 logger = logging.getLogger(__name__)
 
-
+# TODO: Move client to constructor
 class IntervalStrategy(BaseStrategy):
     def __init__(self, figi: str, **kwargs):
         self.account_id = None
@@ -56,6 +56,7 @@ class IntervalStrategy(BaseStrategy):
             f"figi={self.figi}"
         )
         self.corridor = Corridor(bottom=corridor[0], top=corridor[1])
+        breakpoint()
 
     async def get_position_quantity(self) -> int:
         positions = (await client.get_portfolio(account_id=self.account_id)).positions

@@ -1,6 +1,6 @@
 from typing import Dict
 
-from app.strategies.Interval.IntervalStrategy import IntervalStrategy
+from app.strategies.interval.IntervalStrategy import IntervalStrategy
 from app.strategies.base import BaseStrategy
 from app.strategies.errors import UnsupportedStrategyError
 from app.strategies.models import StrategyName
