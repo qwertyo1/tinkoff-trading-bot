@@ -7,7 +7,7 @@ class IntervalStrategyConfig(BaseModel):
     corridor_update_interval: int = Field(600, g=0)
     check_interval: int = Field(60, g=0)
     stop_loss_percentage: float = Field(0.1, ge=0.0, le=1.0)
-    quantity_limit: int = Field(0, g=0)
+    quantity_limit: int = Field(0, ge=0)
 
 
 class Corridor(BaseModel):

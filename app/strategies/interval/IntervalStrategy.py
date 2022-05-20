@@ -46,6 +46,8 @@ class IntervalStrategy(BaseStrategy):
 
     async def update_corridor(self) -> None:
         candles = await self.get_historical_data()
+        if len(candles) == 0:
+            return
         values = []
         for candle in candles:
             values.append(quotation_to_float(candle.close))
@@ -56,7 +58,6 @@ class IntervalStrategy(BaseStrategy):
             f"figi={self.figi}"
         )
         self.corridor = Corridor(bottom=corridor[0], top=corridor[1])
-        breakpoint()
 
     async def get_position_quantity(self) -> int:
         positions = (await client.get_portfolio(account_id=self.account_id)).positions
@@ -120,6 +121,8 @@ class IntervalStrategy(BaseStrategy):
         while True:
             await asyncio.sleep(self.config.check_interval)
 
+            await self.update_corridor()
+
             orders = await client.get_orders(account_id=self.account_id)
             if get_order(orders=orders.orders, figi=self.figi):
                 logger.info(f"There are orders in progress. Waiting. figi={self.figi}")
@@ -142,9 +145,7 @@ class IntervalStrategy(BaseStrategy):
     async def start(self):
         self.account_id = (await client.get_accounts()).accounts.pop().id
         await self.update_corridor()
-
-        asyncio.create_task(self.corridor_update_cycle())
-        asyncio.create_task(self.main_cycle())
+        await self.main_cycle()
 
     async def stop(self):
         pass
