@@ -117,6 +117,21 @@ class IntervalStrategy(BaseStrategy):
         last_prices = last_prices_response.last_prices
         return quotation_to_float(last_prices.pop().price)
 
+    async def validate_stop_loss(self, last_price: float):
+        positions = (await client.get_portfolio(account_id=self.account_id)).positions
+        position = get_position(positions, self.figi)
+        position_price = quotation_to_float(position.average_position_price)
+        if position_price < last_price:
+            logger.info(f"Stop loss triggered. Last price={last_price} figi={self.figi}")
+            await client.post_order(
+                figi=self.figi,
+                direction=ORDER_DIRECTION_SELL,
+                quantity=int(quotation_to_float(position.quantity)),
+                order_type=ORDER_TYPE_MARKET,
+                account_id=self.account_id,
+            )
+        return
+
     async def main_cycle(self):
         while True:
             await asyncio.sleep(self.config.check_interval)
@@ -132,6 +147,7 @@ class IntervalStrategy(BaseStrategy):
             logger.debug(f"Last price: {last_price}, figi={self.figi}")
 
             # TODO: check if our position price should trigger stop loss
+            await self.validate_stop_loss(last_price)
 
             if last_price >= self.corridor.top:
                 await self.handle_corridor_crossing_top(

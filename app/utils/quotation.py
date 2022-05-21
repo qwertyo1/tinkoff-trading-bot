@@ -1,9 +1,10 @@
 import math
+from typing import Union
 
-from tinkoff.invest import Quotation
+from tinkoff.invest import Quotation, MoneyValue
 
 
-def quotation_to_float(quotation: Quotation) -> float:
+def quotation_to_float(quotation: Union[Quotation, MoneyValue]) -> float:
     """
     Convert quotation to float
     """

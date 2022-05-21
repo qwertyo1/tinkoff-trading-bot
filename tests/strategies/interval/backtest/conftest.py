@@ -19,6 +19,7 @@ from tinkoff.invest import (
     Quotation,
     OrderDirection,
     OrderType,
+    MoneyValue,
 )
 from tinkoff.invest.async_services import AsyncServices
 from tinkoff.invest.caching.cache_settings import MarketDataCacheSettings
@@ -81,7 +82,7 @@ def client() -> Services:
 class CandleHandler:
     def __init__(self, config: IntervalStrategyConfig):
         self.now = now()
-        self.from_date = self.now - timedelta(days=50)
+        self.from_date = self.now - timedelta(days=165)
         self.candles = []
         self.config = config
 
@@ -130,11 +131,16 @@ class PortfolioHandler:
         self.resources = 0
         self.figi = figi
         self.candle_handler = candle_handler
+        self.average_price = MoneyValue(units=0, nano=0)
 
     async def get_portfolio(self, account_id: str) -> PortfolioResponse:
         return PortfolioResponse(
             positions=[
-                PortfolioPosition(figi=self.figi, quantity=Quotation(units=self.positions, nano=0))
+                PortfolioPosition(
+                    figi=self.figi,
+                    quantity=Quotation(units=self.positions, nano=0),
+                    average_position_price=self.average_price,
+                )
             ]
         )
 
@@ -148,15 +154,21 @@ class PortfolioHandler:
         order_type: OrderType = OrderType(0),
         order_id: str = "",
     ):
-        last_price = quotation_to_float(
+        last_price_quotation = (
             (await self.candle_handler.get_last_prices(figi=[self.figi])).last_prices[0].price
         )
+        last_price = quotation_to_float(last_price_quotation)
+        # TODO: Make it count average price correctly
         if direction == OrderDirection.ORDER_DIRECTION_BUY:
             self.positions += quantity
             self.resources -= quantity * last_price
+            self.average_price = MoneyValue(
+                units=last_price_quotation.units, nano=last_price_quotation.nano
+            )
         elif direction == OrderDirection.ORDER_DIRECTION_SELL:
             self.positions -= quantity
             self.resources += quantity * last_price
+            self.average_price = MoneyValue(units=0, nano=0)
 
 
 @pytest.fixture(scope="session")
