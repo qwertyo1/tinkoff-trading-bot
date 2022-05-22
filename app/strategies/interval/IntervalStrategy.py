@@ -14,6 +14,7 @@ from tinkoff.invest.grpc.orders_pb2 import (
 from tinkoff.invest.utils import now
 
 from app.client import client
+from app.settings import settings
 from app.stats.handler import StatsHandler
 from app.strategies.interval.models import IntervalStrategyConfig, Corridor
 from app.strategies.base import BaseStrategy
@@ -37,7 +38,7 @@ class IntervalStrategy(BaseStrategy):
     """
 
     def __init__(self, figi: str, **kwargs):
-        self.account_id = None
+        self.account_id = settings.account_id
         self.corridor: Optional[Corridor] = None
         self.figi = figi
         self.config: IntervalStrategyConfig = IntervalStrategyConfig(**kwargs)
@@ -238,9 +239,10 @@ class IntervalStrategy(BaseStrategy):
             await asyncio.sleep(self.config.check_interval)
 
     async def start(self):
-        try:
-            self.account_id = (await client.get_accounts()).accounts.pop().id
-        except AioRequestError as are:
-            logger.error(f"Error taking account id. Stopping strategy. {are}")
-            return
+        if self.account_id is None:
+            try:
+                self.account_id = (await client.get_accounts()).accounts.pop().id
+            except AioRequestError as are:
+                logger.error(f"Error taking account id. Stopping strategy. {are}")
+                return
         await self.main_cycle()
