@@ -13,6 +13,5 @@ setup(
         "pytest",
         "pytest-mock",
         "pytest-asyncio",
-        "pytest-cov",
     ],
 )
