@@ -9,7 +9,7 @@ def get_position(positions: List[PortfolioPosition], figi: str) -> Optional[Port
 
     :param positions: list of positions
     :param figi: figi of position
-    :return: position
+    :return: position or None if not found
     """
     for position in positions:
         if position.figi == figi:

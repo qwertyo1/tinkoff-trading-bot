@@ -6,9 +6,9 @@
         "name": "interval",
         "parameters": {
           "interval_size": "0.8",
-          "days_back_to_consider": "5",
+          "days_back_to_consider": 10,
           "quantity_limit": 100,
-          "check_interval": "3"
+          "check_interval": 60
         }
       }
     }

@@ -20,6 +20,8 @@ from tinkoff.invest import (
     OrderDirection,
     OrderType,
     MoneyValue,
+    OrderState,
+    OrderExecutionReportStatus,
 )
 from tinkoff.invest.async_services import AsyncServices
 from tinkoff.invest.caching.cache_settings import MarketDataCacheSettings
@@ -42,8 +44,13 @@ def account_id():
 
 
 @pytest.fixture(scope="session")
-def figi():
+def figi() -> str:
     return "BBG000QDVR53"
+
+
+@pytest.fixture(scope="session")
+def comission() -> float:
+    return 0.025
 
 
 @pytest.fixture
@@ -64,12 +71,11 @@ def get_portfolio_response(account_id: str) -> GetOrdersResponse:
 @pytest.fixture(scope="session")
 def test_config() -> IntervalStrategyConfig:
     return IntervalStrategyConfig(
-        interval_size=0.1,
-        days_back_to_consider=15,
-        corridor_update_interval=600,
-        check_interval=6000,
+        interval_size=0.8,
+        days_back_to_consider=7,
+        check_interval=600,
         stop_loss_percentage=0.1,
-        quantity_limit=100,
+        quantity_limit=10,
     )
 
 
@@ -81,8 +87,10 @@ def client() -> Services:
 
 class CandleHandler:
     def __init__(self, config: IntervalStrategyConfig):
-        self.now = now()
-        self.from_date = self.now - timedelta(days=165)
+        self.now = datetime.datetime.fromordinal(738296).replace(
+            tzinfo=datetime.timezone.utc
+        )  # now()
+        self.from_date = self.now - timedelta(days=30)
         self.candles = []
         self.config = config
 
@@ -125,15 +133,15 @@ class CandleHandler:
 
 
 class PortfolioHandler:
-    def __init__(self, figi: str, candle_handler: CandleHandler):
+    def __init__(self, figi: str, comission: float, candle_handler: CandleHandler):
         self.positions = 0
-        # TODO: Think how to measure efficiency of this
         self.resources = 0
         self.figi = figi
+        self.comission = comission
         self.candle_handler = candle_handler
         self.average_price = MoneyValue(units=0, nano=0)
 
-    async def get_portfolio(self, account_id: str) -> PortfolioResponse:
+    async def get_portfolio(self, **kwargs) -> PortfolioResponse:
         return PortfolioResponse(
             positions=[
                 PortfolioPosition(
@@ -145,29 +153,22 @@ class PortfolioHandler:
         )
 
     async def post_order(
-        self,
-        figi: str = "",
-        quantity: int = 0,
-        price: Optional[Quotation] = None,
-        direction: OrderDirection = OrderDirection(0),
-        account_id: str = "",
-        order_type: OrderType = OrderType(0),
-        order_id: str = "",
+        self, quantity: int = 0, direction: OrderDirection = OrderDirection(0), **kwargs
     ):
         last_price_quotation = (
             (await self.candle_handler.get_last_prices(figi=[self.figi])).last_prices[0].price
         )
         last_price = quotation_to_float(last_price_quotation)
-        # TODO: Make it count average price correctly
+        # TODO: Make it count average price respecting amount
         if direction == OrderDirection.ORDER_DIRECTION_BUY:
             self.positions += quantity
-            self.resources -= quantity * last_price
+            self.resources -= quantity * last_price + (self.comission * quantity * last_price)
             self.average_price = MoneyValue(
                 units=last_price_quotation.units, nano=last_price_quotation.nano
             )
         elif direction == OrderDirection.ORDER_DIRECTION_SELL:
             self.positions -= quantity
-            self.resources += quantity * last_price
+            self.resources += quantity * last_price - (self.comission * quantity * last_price)
             self.average_price = MoneyValue(units=0, nano=0)
 
 
@@ -177,8 +178,10 @@ def candle_handler(test_config: IntervalStrategyConfig) -> CandleHandler:
 
 
 @pytest.fixture(scope="session")
-def portfolio_handler(figi: str, candle_handler: CandleHandler) -> PortfolioHandler:
-    return PortfolioHandler(figi, candle_handler)
+def portfolio_handler(
+    figi: str, comission: float, candle_handler: CandleHandler
+) -> PortfolioHandler:
+    return PortfolioHandler(figi, comission, candle_handler)
 
 
 @pytest.fixture

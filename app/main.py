@@ -13,7 +13,6 @@ logging.basicConfig(
 
 async def init():
     await client.ainit()
-    # TODO: add account monitoring for statistics
     for instrument_config in instruments_config.instruments:
         strategy = resolve_strategy(
             strategy_name=instrument_config.strategy.name,
