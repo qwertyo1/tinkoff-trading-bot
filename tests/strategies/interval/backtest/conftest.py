@@ -1,15 +1,13 @@
-import datetime
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Optional
-from unittest.mock import MagicMock, AsyncMock
+from typing import List
+from unittest.mock import AsyncMock
 
 import pytest
 from pytest_mock import MockerFixture
 from tinkoff.invest import (
     GetAccountsResponse,
     Account,
-    AsyncClient,
     Client,
     GetOrdersResponse,
     GetLastPricesResponse,
@@ -18,12 +16,8 @@ from tinkoff.invest import (
     PortfolioPosition,
     Quotation,
     OrderDirection,
-    OrderType,
     MoneyValue,
-    OrderState,
-    OrderExecutionReportStatus,
 )
-from tinkoff.invest.async_services import AsyncServices
 from tinkoff.invest.caching.cache_settings import MarketDataCacheSettings
 from tinkoff.invest.services import MarketDataCache, Services
 from tinkoff.invest.utils import now
@@ -50,7 +44,7 @@ def figi() -> str:
 
 @pytest.fixture(scope="session")
 def comission() -> float:
-    return 0.025
+    return 0.003
 
 
 @pytest.fixture
@@ -87,10 +81,8 @@ def client() -> Services:
 
 class CandleHandler:
     def __init__(self, config: IntervalStrategyConfig):
-        self.now = datetime.datetime.fromordinal(738296).replace(
-            tzinfo=datetime.timezone.utc
-        )  # now()
-        self.from_date = self.now - timedelta(days=30)
+        self.now = now()
+        self.from_date = self.now - timedelta(days=90)
         self.candles = []
         self.config = config
 
