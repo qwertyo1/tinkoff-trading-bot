@@ -18,7 +18,7 @@ To run the bot, you need to have a Tinkoff account.
   ```
 - Install dependencies with
   ```bash
-  python3 setup.py install
+  pip install -r requirements.txt
   ```
 - Run the bot with 
   ```bash 
