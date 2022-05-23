@@ -1,18 +1,14 @@
 import sqlite3
-import sys
 
 
-def get_orders(figi: str):
+def get_orders():
     with sqlite3.connect("stats.db") as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM orders WHERE figi=?",
-            (figi,),
-        )
+        cursor.execute("SELECT * FROM orders")
         return cursor.fetchall()
 
 
 if __name__ == "__main__":
-    orders = get_orders(figi=sys.argv[1])
+    orders = get_orders()
     for order in orders:
         print(order)
