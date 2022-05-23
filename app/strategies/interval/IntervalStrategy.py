@@ -107,10 +107,9 @@ class IntervalStrategy(BaseStrategy):
             logger.info(
                 f"Selling {position_quantity} shares. Last price={last_price} figi={self.figi}"
             )
-            order_id = str(uuid4())
             try:
-                await client.post_order(
-                    order_id=order_id,
+                posted_order = await client.post_order(
+                    order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
                     quantity=position_quantity,
@@ -121,7 +120,9 @@ class IntervalStrategy(BaseStrategy):
                 logger.error(f"Failed to post sell order. figi={self.figi}. {e}")
                 return
             asyncio.create_task(
-                self.stats_handler.handle_new_order(order_id=order_id, account_id=self.account_id)
+                self.stats_handler.handle_new_order(
+                    order_id=posted_order.order_id, account_id=self.account_id
+                )
             )
 
     async def handle_corridor_crossing_bottom(self, last_price: float) -> None:
@@ -138,10 +139,9 @@ class IntervalStrategy(BaseStrategy):
                 f"Buying {quantity_to_buy} shares. Last price={last_price} figi={self.figi}"
             )
 
-            order_id = str(uuid4())
             try:
-                await client.post_order(
-                    order_id=order_id,
+                posted_order = await client.post_order(
+                    order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_BUY,
                     quantity=quantity_to_buy,
@@ -152,7 +152,9 @@ class IntervalStrategy(BaseStrategy):
                 logger.error(f"Failed to post buy order. figi={self.figi}. {e}")
                 return
             asyncio.create_task(
-                self.stats_handler.handle_new_order(order_id=order_id, account_id=self.account_id)
+                self.stats_handler.handle_new_order(
+                    order_id=posted_order.order_id, account_id=self.account_id
+                )
             )
 
     async def get_last_price(self) -> float:
@@ -171,13 +173,14 @@ class IntervalStrategy(BaseStrategy):
         """
         positions = (await client.get_portfolio(account_id=self.account_id)).positions
         position = get_position(positions, self.figi)
+        if position is None:
+            return
         position_price = quotation_to_float(position.average_position_price)
         if position_price < last_price:
             logger.info(f"Stop loss triggered. Last price={last_price} figi={self.figi}")
-            order_id = str(uuid4())
             try:
-                await client.post_order(
-                    order_id=order_id,
+                posted_order = await client.post_order(
+                    order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
                     quantity=int(quotation_to_float(position.quantity)),
@@ -188,7 +191,9 @@ class IntervalStrategy(BaseStrategy):
                 logger.error(f"Failed to post sell order. figi={self.figi}. {e}")
                 return
             asyncio.create_task(
-                self.stats_handler.handle_new_order(order_id=order_id, account_id=self.account_id)
+                self.stats_handler.handle_new_order(
+                    order_id=posted_order.order_id, account_id=self.account_id
+                )
             )
         return
 
