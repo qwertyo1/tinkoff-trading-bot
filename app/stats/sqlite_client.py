@@ -41,6 +41,6 @@ class StatsSQLiteClient:
 
     def update_order_status(self, order_id: str, status: str):
         self.db_client.execute_update(
-            "UPDATE orders SET type=?, price=?, quantity=? WHERE id=?",
+            "UPDATE orders SET status=? WHERE id=?",
             (status, order_id),
         )
