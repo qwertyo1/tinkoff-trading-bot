@@ -1,7 +1,7 @@
 start:
 	PYTHONPATH=./ python app/main.py
 
-run_backtest:
+backtest:
 	PYTHONPATH=./ pytest .
 
 display_stats:

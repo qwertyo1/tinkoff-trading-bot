@@ -52,8 +52,8 @@ Each list element is a dictionary with the following keys:
 Main strategy logic is to buy at the lowest price and sell at the highest price of the
 calculated interval.
 
-Interval is calculated by taking interval_size percents of the last prices
-for the last days_back_to_consider days. By default, it's set to 80 percents which means
+Interval is calculated by taking `interval_size` percents of the last prices
+for the last `days_back_to_consider` days. By default, it's set to 80 percents which means
 that the interval is from 10th to 90th percentile.
 
 ## Get accounts tool
@@ -64,7 +64,17 @@ make get_accounts
 ```
 
 ## Backtest
-[//]: # (TODO: Add backtest info)
+In `test/strategies/interval/backtest/conftest.py` you can find the test configuration.
+Set up `figi`, `comission`, strategy config object, and `from_date` offset.
+To run backtest use this command:
+```bash
+make backtest
+```
+The result is saved in `test/strategies/interval/backtest/test_on_historical_data.txt`
 
-## Stats export
-[//]: # (TODO: Add stats export info)
+## Stats displaying
+Use this command to display stats:
+```bash
+make display_stats
+```
+It will display the list of executed trades
