@@ -1,4 +1,4 @@
-### 🥇 The winner in [Tinkoff invest robot contest](https://github.com/Tinkoff/invest-robot-contest)
+### 🥇 The winner in [Tinkoff invest robot contest](https://github.com/Tinkoff/invest-robot-contest) 01.06.2022
 
 # Tinkoff Trading Bot
 
