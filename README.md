@@ -1,3 +1,5 @@
+### 🥇 The winner in [Tinkoff invest robot contest](https://github.com/Tinkoff/invest-robot-contest)
+
 # Tinkoff Trading Bot
 
 This is a bot for trading on Tinkoff broker.
