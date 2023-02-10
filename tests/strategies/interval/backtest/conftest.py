@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 from pathlib import Path
 from typing import List
@@ -16,7 +17,7 @@ from tinkoff.invest import (
     PortfolioPosition,
     Quotation,
     OrderDirection,
-    MoneyValue,
+    MoneyValue, PostOrderResponse,
 )
 from tinkoff.invest.caching.cache_settings import MarketDataCacheSettings
 from tinkoff.invest.services import MarketDataCache, Services
@@ -162,6 +163,8 @@ class PortfolioHandler:
             self.positions -= quantity
             self.resources += quantity * last_price - (self.comission * quantity * last_price)
             self.average_price = MoneyValue(units=0, nano=0)
+
+        return PostOrderResponse(order_id=uuid.uuid4().hex)
 
 
 @pytest.fixture(scope="session")
