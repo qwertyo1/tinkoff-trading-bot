@@ -7,7 +7,7 @@ from app.strategies.strategy_fabric import resolve_strategy
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format="[%(levelname)-5s] %(asctime)-19s %(name)s: %(message)s",
+    format="[%(levelname)-5s] %(asctime)-19s %(name)s:%(lineno)d: %(message)s",
 )
 
 

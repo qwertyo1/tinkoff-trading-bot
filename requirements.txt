@@ -1,4 +1,4 @@
-tinkoff-investments==0.2.0b27
+tinkoff-investments==0.2.0b59
 pydantic[dotenv]==1.9.1
 numpy==1.22.4
 pytest==7.1.2
