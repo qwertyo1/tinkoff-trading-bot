@@ -5,7 +5,8 @@ from typing import List, Optional
 from uuid import uuid4
 
 import numpy as np
-from tinkoff.invest import CandleInterval, HistoricCandle, AioRequestError
+from tinkoff.invest import CandleInterval, HistoricCandle, AioRequestError, Instrument
+from tinkoff.invest.grpc.instruments_pb2 import INSTRUMENT_ID_TYPE_FIGI
 from tinkoff.invest.grpc.orders_pb2 import (
     ORDER_DIRECTION_SELL,
     ORDER_DIRECTION_BUY,
@@ -20,6 +21,7 @@ from app.strategies.interval.models import IntervalStrategyConfig, Corridor
 from app.strategies.base import BaseStrategy
 from app.strategies.models import StrategyName
 from app.utils.portfolio import get_position, get_order
+from app.utils.quantity import is_quantity_valid
 from app.utils.quotation import quotation_to_float
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,7 @@ class IntervalStrategy(BaseStrategy):
         self.account_id = settings.account_id
         self.corridor: Optional[Corridor] = None
         self.figi = figi
+        self.instrument_info: Optional[Instrument] = None
         self.config: IntervalStrategyConfig = IntervalStrategyConfig(**kwargs)
         self.stats_handler = StatsHandler(StrategyName.INTERVAL, client)
 
@@ -78,7 +81,7 @@ class IntervalStrategy(BaseStrategy):
             values.append(quotation_to_float(candle.close))
         lower_percentile = (1 - self.config.interval_size) / 2 * 100
         corridor = list(np.percentile(values, [lower_percentile, 100 - lower_percentile]))
-        logger.info(
+        logger.debug(
             f"Corridor: {corridor}. days_back_to_consider={self.config.days_back_to_consider} "
             f"figi={self.figi}"
         )
@@ -108,11 +111,14 @@ class IntervalStrategy(BaseStrategy):
                 f"Selling {position_quantity} shares. Last price={last_price} figi={self.figi}"
             )
             try:
+                quantity = position_quantity / self.instrument_info.lot
+                if not is_quantity_valid(quantity):
+                    raise ValueError(f"Invalid quantity for posting an order. quantity={quantity}")
                 posted_order = await client.post_order(
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
-                    quantity=position_quantity,
+                    quantity=quantity,
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
@@ -138,13 +144,15 @@ class IntervalStrategy(BaseStrategy):
             logger.info(
                 f"Buying {quantity_to_buy} shares. Last price={last_price} figi={self.figi}"
             )
-
             try:
+                quantity = quantity_to_buy / self.instrument_info.lot
+                if not is_quantity_valid(quantity):
+                    raise ValueError(f"Invalid quantity for posting an order. quantity={quantity}")
                 posted_order = await client.post_order(
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_BUY,
-                    quantity=quantity_to_buy,
+                    quantity=quantity,
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
@@ -179,11 +187,14 @@ class IntervalStrategy(BaseStrategy):
         if last_price <= position_price - position_price * self.config.stop_loss_percent:
             logger.info(f"Stop loss triggered. Last price={last_price} figi={self.figi}")
             try:
+                quantity = int(quotation_to_float(position.quantity)) / self.instrument_info.lot
+                if not is_quantity_valid(quantity):
+                    raise ValueError(f"Invalid quantity for posting an order. quantity={quantity}")
                 posted_order = await client.post_order(
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
-                    quantity=int(quotation_to_float(position.quantity)),
+                    quantity=quantity,
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
@@ -210,7 +221,18 @@ class IntervalStrategy(BaseStrategy):
             await asyncio.sleep(60)
             trading_status = await client.get_trading_status(figi=self.figi)
 
+    async def prepare_data(self):
+        self.instrument_info = (
+            await client.get_instrument(id_type=INSTRUMENT_ID_TYPE_FIGI, id=self.figi)
+        ).instrument
+
     async def main_cycle(self):
+        await self.prepare_data()
+        logger.info(
+            f"Starting interval strategy for figi {self.figi} "
+            f"({self.instrument_info.name} {self.instrument_info.currency}) lot size is {self.instrument_info.lot}. "
+            f"Configuration is: {self.config}"
+        )
         while True:
             try:
                 await self.ensure_market_open()

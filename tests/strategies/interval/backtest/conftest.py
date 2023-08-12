@@ -17,9 +17,12 @@ from tinkoff.invest import (
     PortfolioPosition,
     Quotation,
     OrderDirection,
-    MoneyValue, PostOrderResponse,
+    MoneyValue,
+    PostOrderResponse,
+    InstrumentResponse,
+    Instrument,
 )
-from tinkoff.invest.caching.cache_settings import MarketDataCacheSettings
+from tinkoff.invest.caching.market_data_cache.cache_settings import MarketDataCacheSettings
 from tinkoff.invest.services import MarketDataCache, Services
 from tinkoff.invest.utils import now
 
@@ -40,12 +43,23 @@ def account_id():
 
 @pytest.fixture(scope="session")
 def figi() -> str:
+    # return "BBG333333333"
     return "BBG000QDVR53"
 
 
 @pytest.fixture(scope="session")
 def comission() -> float:
     return 0.003
+
+
+@pytest.fixture(scope="session")
+def lot() -> int:
+    return 100
+
+
+@pytest.fixture
+def instrument_response(figi: str, lot: int) -> InstrumentResponse:
+    return InstrumentResponse(instrument=Instrument(figi=figi, lot=lot))
 
 
 @pytest.fixture
@@ -64,13 +78,13 @@ def get_portfolio_response(account_id: str) -> GetOrdersResponse:
 
 
 @pytest.fixture(scope="session")
-def test_config() -> IntervalStrategyConfig:
+def test_config(lot: int) -> IntervalStrategyConfig:
     return IntervalStrategyConfig(
         interval_size=0.8,
-        days_back_to_consider=7,
+        days_back_to_consider=3,
         check_interval=600,
-        stop_loss_percentage=0.1,
-        quantity_limit=10,
+        stop_loss_percent=0.01,
+        quantity_limit=lot,
     )
 
 
@@ -83,7 +97,7 @@ def client() -> Services:
 class CandleHandler:
     def __init__(self, config: IntervalStrategyConfig):
         self.now = now()
-        self.from_date = self.now - timedelta(days=90)
+        self.from_date = self.now - timedelta(days=15)
         self.candles = []
         self.config = config
 
@@ -126,10 +140,11 @@ class CandleHandler:
 
 
 class PortfolioHandler:
-    def __init__(self, figi: str, comission: float, candle_handler: CandleHandler):
+    def __init__(self, figi: str, comission: float, lot: int, candle_handler: CandleHandler):
         self.positions = 0
         self.resources = 0
         self.figi = figi
+        self.lot = lot
         self.comission = comission
         self.candle_handler = candle_handler
         self.average_price = MoneyValue(units=0, nano=0)
@@ -152,15 +167,16 @@ class PortfolioHandler:
             (await self.candle_handler.get_last_prices(figi=[self.figi])).last_prices[0].price
         )
         last_price = quotation_to_float(last_price_quotation)
+        items_quantity = quantity * self.lot
         # TODO: Make it count average price respecting amount
         if direction == OrderDirection.ORDER_DIRECTION_BUY:
-            self.positions += quantity
+            self.positions += items_quantity
             self.resources -= quantity * last_price + (self.comission * quantity * last_price)
             self.average_price = MoneyValue(
                 units=last_price_quotation.units, nano=last_price_quotation.nano
             )
         elif direction == OrderDirection.ORDER_DIRECTION_SELL:
-            self.positions -= quantity
+            self.positions -= items_quantity
             self.resources += quantity * last_price - (self.comission * quantity * last_price)
             self.average_price = MoneyValue(units=0, nano=0)
 
@@ -174,14 +190,15 @@ def candle_handler(test_config: IntervalStrategyConfig) -> CandleHandler:
 
 @pytest.fixture(scope="session")
 def portfolio_handler(
-    figi: str, comission: float, candle_handler: CandleHandler
+    figi: str, comission: float, lot: int, candle_handler: CandleHandler
 ) -> PortfolioHandler:
-    return PortfolioHandler(figi, comission, candle_handler)
+    return PortfolioHandler(figi, comission, lot, candle_handler)
 
 
 @pytest.fixture
 def mock_client(
     mocker: MockerFixture,
+    instrument_response: InstrumentResponse,
     accounts_response: GetAccountsResponse,
     orders_response: GetOrdersResponse,
     candle_handler: CandleHandler,
@@ -191,6 +208,7 @@ def mock_client(
     test_config: IntervalStrategyConfig,
 ) -> TinkoffClient:
     client_mock = mocker.patch("app.strategies.interval.IntervalStrategy.client")
+    client_mock.get_instrument = AsyncMock(return_value=instrument_response)
     client_mock.get_accounts = AsyncMock(return_value=accounts_response)
     client_mock.get_orders = AsyncMock(return_value=orders_response)
 

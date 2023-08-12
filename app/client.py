@@ -11,6 +11,7 @@ from tinkoff.invest import (
     GetLastPricesResponse,
     OrderState,
     GetTradingStatusResponse,
+    InstrumentResponse,
 )
 from tinkoff.invest.async_services import AsyncServices
 
@@ -65,6 +66,9 @@ class TinkoffClient:
 
     async def get_trading_status(self, **kwargs) -> GetTradingStatusResponse:
         return await self.client.market_data.get_trading_status(**kwargs)
+
+    async def get_instrument(self, **kwargs) -> InstrumentResponse:
+        return await self.client.instruments.get_instrument_by(**kwargs)
 
 
 client = TinkoffClient(token=settings.token, sandbox=settings.sandbox)

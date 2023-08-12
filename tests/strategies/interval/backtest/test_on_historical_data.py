@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from pytest_mock import MockFixture
 
@@ -18,10 +16,13 @@ class TestOnHistoricalData:
         mock_client: TinkoffClient,
         portfolio_handler: PortfolioHandler,
         figi: str,
+        lot: int,
         test_config: IntervalStrategyConfig,
     ):
         mocker.patch("app.strategies.interval.IntervalStrategy.asyncio.sleep")
-        mocker.patch("app.strategies.interval.IntervalStrategy.StatsHandler.handle_new_order")
+        stats_handler_mock = mocker.patch(
+            "app.strategies.interval.IntervalStrategy.StatsHandler.handle_new_order"
+        )
         mocker.patch("app.strategies.interval.IntervalStrategy.IntervalStrategy.ensure_market_open")
         strategy_instance = IntervalStrategy(figi=figi, **test_config.dict())
         with pytest.raises(NoMoreDataError):
@@ -31,7 +32,9 @@ class TestOnHistoricalData:
         resources = portfolio_handler.resources
         with open("./tests/strategies/interval/backtest/test_on_historical_data.txt", "w") as f:
             f.write(
-                f"Positions in portfolio: {positions}\n"
+                f"Positions in portfolio: {positions} ({positions/lot} lots)\n"
                 f"It's average price:     {quotation_to_float(average_price)}\n"
-                f"Balance left:           {resources}"
+                f"Balance left:           {resources}\n"
+                f"Orders made:            {len(stats_handler_mock.mock_calls)}"
             )
+        assert False
