@@ -43,7 +43,6 @@ def account_id():
 
 @pytest.fixture(scope="session")
 def figi() -> str:
-    # return "BBG333333333"
     return "BBG000QDVR53"
 
 
