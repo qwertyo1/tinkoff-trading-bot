@@ -173,10 +173,10 @@ class IntervalStrategy(BaseStrategy):
         """
         positions = (await client.get_portfolio(account_id=self.account_id)).positions
         position = get_position(positions, self.figi)
-        if position is None:
+        if position is None or quotation_to_float(position.quantity) == 0:
             return
         position_price = quotation_to_float(position.average_position_price)
-        if position_price < last_price:
+        if last_price <= position_price - position_price * self.config.stop_loss_percent:
             logger.info(f"Stop loss triggered. Last price={last_price} figi={self.figi}")
             try:
                 posted_order = await client.post_order(
