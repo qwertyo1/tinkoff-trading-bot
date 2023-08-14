@@ -31,9 +31,9 @@ class TinkoffClient:
         self.market_data_cache: Optional[MarketDataCache] = None
 
     async def ainit(self):
-        self.client = await AsyncClient(token=self.token, app_name="qwertyo1").__aenter__()
+        self.client = await AsyncClient(token=self.token, app_name=settings.app_name).__aenter__()
         if settings.use_candle_history_cache:
-            self.sync_client = Client(token=self.token, app_name="qwertyo1").__enter__()
+            self.sync_client = Client(token=self.token, app_name=settings.app_name).__enter__()
             self.market_data_cache = MarketDataCache(
                 settings=MarketDataCacheSettings(base_cache_dir=Path("market_data_cache")),
                 services=self.sync_client,

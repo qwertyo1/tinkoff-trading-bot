@@ -5,6 +5,7 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
+    app_name: str = "qwertyo1"
     token: str
     account_id: Optional[str] = None
     sandbox: bool = True
