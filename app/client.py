@@ -28,10 +28,16 @@ class TinkoffClient:
         self.sandbox = sandbox
         self.client: Optional[AsyncServices] = None
         self.sync_client: Optional[Services] = None
+        self.market_data_cache: Optional[MarketDataCache] = None
 
     async def ainit(self):
         self.client = await AsyncClient(token=self.token, app_name="qwertyo1").__aenter__()
-        self.sync_client = Client(token=self.token, app_name="qwertyo1").__enter__()
+        if settings.use_candle_history_cache:
+            self.sync_client = Client(token=self.token, app_name="qwertyo1").__enter__()
+            self.market_data_cache = MarketDataCache(
+                settings=MarketDataCacheSettings(base_cache_dir=Path("market_data_cache")),
+                services=self.sync_client,
+            )
 
     async def get_orders(self, **kwargs):
         if self.sandbox:
@@ -49,12 +55,12 @@ class TinkoffClient:
         return await self.client.users.get_accounts()
 
     async def get_all_candles(self, **kwargs):
-        market_data_cache = MarketDataCache(
-            settings=MarketDataCacheSettings(base_cache_dir=Path("market_data_cache")),
-            services=self.sync_client,
-        )
-        for candle in market_data_cache.get_all_candles(**kwargs):
-            yield candle
+        if settings.use_candle_history_cache:
+            for candle in self.market_data_cache.get_all_candles(**kwargs):
+                yield candle
+        else:
+            async for candle in self.client.get_all_candles(**kwargs):
+                yield candle
 
     async def get_last_prices(self, **kwargs) -> GetLastPricesResponse:
         return await self.client.market_data.get_last_prices(**kwargs)
