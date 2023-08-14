@@ -12,7 +12,7 @@ class StatsSQLiteClient:
         self.db_client.execute(
             """
             CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY,
+                id str PRIMARY KEY,
                 figi str,
                 direction TEXT,
                 price REAL,
