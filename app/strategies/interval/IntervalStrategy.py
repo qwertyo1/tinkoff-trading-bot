@@ -118,7 +118,7 @@ class IntervalStrategy(BaseStrategy):
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
-                    quantity=quantity,
+                    quantity=int(quantity),
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
@@ -152,7 +152,7 @@ class IntervalStrategy(BaseStrategy):
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_BUY,
-                    quantity=quantity,
+                    quantity=int(quantity),
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
@@ -194,7 +194,7 @@ class IntervalStrategy(BaseStrategy):
                     order_id=str(uuid4()),
                     figi=self.figi,
                     direction=ORDER_DIRECTION_SELL,
-                    quantity=quantity,
+                    quantity=int(quantity),
                     order_type=ORDER_TYPE_MARKET,
                     account_id=self.account_id,
                 )
